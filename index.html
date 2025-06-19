@@ -483,7 +483,7 @@
   <div class="container">
     <header>
       <div class="greeting">
-        <h1>Welcome back</h1>
+        <h1>Welcome back, Al-Mubarak</h1>
         <p>Your home energy at a glance</p>
       </div>
       <div class="status" id="connectionStatus">
@@ -554,15 +554,6 @@
         </div>
         <div class="card-value" id="carbonEmission">0.00</div>
         <span class="card-unit">kg CO2e</span>
-      </div>
-      
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Air Quality</span>
-          <span class="card-icon">🍃</span>
-        </div>
-        <div class="card-value" id="airQuality">0.00</div>
-        <span class="card-unit">ppm</span>
       </div>
       
       <div class="card system-status-card">
@@ -837,7 +828,6 @@
       document.getElementById('frequency').textContent = "0.00";
       document.getElementById('powerFactor').textContent = "0.00";
       document.getElementById('carbonEmission').textContent = "0.00";
-      document.getElementById('airQuality').textContent = "0.00";
       
       // Update status to indicate no data
       document.getElementById('statusTitle').textContent = "No Data";
@@ -866,22 +856,21 @@
           resetDisplay();
         }, 30000); // 30 seconds
         
-        // Update values
+        // Update values with correct field names
         document.getElementById('voltage').textContent = data.voltage.toFixed(2);
         document.getElementById('current').textContent = data.current.toFixed(2);
         document.getElementById('power').textContent = data.power.toFixed(2);
-        document.getElementById('energy').textContent = data.energy_kWh.toFixed(3);
+        document.getElementById('energy').textContent = data.energy.toFixed(3); // Fixed field name
         document.getElementById('frequency').textContent = data.frequency.toFixed(2);
         document.getElementById('powerFactor').textContent = data.power_factor.toFixed(2);
         document.getElementById('carbonEmission').textContent = data.co2_emission_kg.toFixed(3);
-        document.getElementById('airQuality').textContent = data.mq2_ppm.toFixed(1);
         
         const timestamp = Date.now();
         
         // Add new energy data point
         allEnergyData.push({
           x: timestamp,
-          y: data.energy_kWh
+          y: data.energy // Fixed field name
         });
         
         // Update chart
@@ -937,8 +926,8 @@
 
         Object.entries(data).forEach(([key, value]) => {
           const timestamp = parseInt(key) * 1000; // convert seconds to ms
-          if (value.energy_kWh !== undefined) {
-            allEnergyData.push({ x: timestamp, y: value.energy_kWh });
+          if (value.energy !== undefined) { // Fixed field name
+            allEnergyData.push({ x: timestamp, y: value.energy }); // Fixed field name
           }
         });
 
