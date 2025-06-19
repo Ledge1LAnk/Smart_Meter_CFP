@@ -20,6 +20,7 @@
       --warning: #ffcc00;
       --danger: #ff3333;
       --safe: #00cc66;
+      --system-off: #6666ff;
     }
     * {
       margin: 0;
@@ -178,6 +179,7 @@
       position: absolute;
       bottom: 0;
       left: 0;
+      right: 0;
       width: 180px;
       height: 180px;
       border-radius: 50%;
@@ -424,7 +426,7 @@
       }
       
       .controls {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
       }
       
       header {
@@ -594,7 +596,7 @@
 
     <!-- Relay Controls Section -->
     <div class="controls-section">
-      <h3 class="section-title">Appliance Controls</h3>
+      <h3 class="section-title">Appliance Control</h3>
       <div class="controls" id="relayControls"></div>
     </div>
 
@@ -851,7 +853,7 @@
     }
 
     // Listen for realtime data updates
-    database.ref('sensor_data').on('value', (snapshot) => {
+    database.ref('smart_meter/data').on('value', (snapshot) => {
       const data = snapshot.val();
       if (data) {
         // Reset the timeout on new data
@@ -868,10 +870,10 @@
         document.getElementById('voltage').textContent = data.voltage.toFixed(2);
         document.getElementById('current').textContent = data.current.toFixed(2);
         document.getElementById('power').textContent = data.power.toFixed(2);
-        document.getElementById('energy').textContent = data.energy.toFixed(3);
+        document.getElementById('energy').textContent = data.energy_kWh.toFixed(3);
         document.getElementById('frequency').textContent = data.frequency.toFixed(2);
         document.getElementById('powerFactor').textContent = data.power_factor.toFixed(2);
-        document.getElementById('carbonEmission').textContent = data.carbon_emission_kg.toFixed(3);
+        document.getElementById('carbonEmission').textContent = data.co2_emission_kg.toFixed(3);
         document.getElementById('airQuality').textContent = data.mq2_ppm.toFixed(1);
         
         const timestamp = Date.now();
@@ -879,55 +881,49 @@
         // Add new energy data point
         allEnergyData.push({
           x: timestamp,
-          y: data.energy
+          y: data.energy_kWh
         });
         
         // Update chart
         updateEnergyChart();
         
         // Update system status
-        updateSystemStatus(data.relay_state, data.carbon_emission_kg, data.mq2_ppm);
+        updateSystemStatus(data.relay_state, data.co2_emission_kg, data.mq2_ppm);
       }
     });
 
-    const relayLabels = ["Living Room Light", "Bedroom Light", "Security Light", "Power Outlet 1", "Power Outlet 2", "Power Outlet 3", "Main Power"];
+    // Create relay control
     const relayControls = document.getElementById("relayControls");
     
-    // Create icons array matching labels
-    const relayIcons = ["💡", "💡", "💡", "🔌", "🔌", "🔌", "⚡"];
-
-    relayLabels.forEach((label, i) => {
-      const index = i + 1;
-      const div = document.createElement("div");
-      div.className = "control-card";
-      div.innerHTML = `
-        <div class="power-icon">${relayIcons[i]}</div>
-        <h3 class="control-title">${label}</h3>
-        <label class="switch">
-          <input type="checkbox" id="switch${index}">
-          <span class="slider"></span>
-        </label>
-      `;
-      relayControls.appendChild(div);
-      const checkbox = div.querySelector("input");
-      const ref = database.ref(`control/relay${index}`);
-      
-      // Listen for Firebase updates
-      ref.on('value', (snapshot) => {
-        const state = snapshot.val();
-        checkbox.checked = state;
-        if (state) {
-          div.classList.add('active');
-        } else {
-          div.classList.remove('active');
-        }
-      });
-      
-      // Handle user input
-      checkbox.addEventListener('change', function() {
-        const state = this.checked;
-        ref.set(state);
-      });
+    const div = document.createElement("div");
+    div.className = "control-card";
+    div.innerHTML = `
+      <div class="power-icon">⚡</div>
+      <h3 class="control-title">Main Power Relay</h3>
+      <label class="switch">
+        <input type="checkbox" id="switch1">
+        <span class="slider"></span>
+      </label>
+    `;
+    relayControls.appendChild(div);
+    const checkbox = div.querySelector("input");
+    const ref = database.ref('control/relay1');
+    
+    // Listen for Firebase updates
+    ref.on('value', (snapshot) => {
+      const state = snapshot.val();
+      checkbox.checked = state;
+      if (state) {
+        div.classList.add('active');
+      } else {
+        div.classList.remove('active');
+      }
+    });
+    
+    // Handle user input
+    checkbox.addEventListener('change', function() {
+      const state = this.checked;
+      ref.set(state);
     });
 
     // Load previous data
@@ -941,7 +937,9 @@
 
         Object.entries(data).forEach(([key, value]) => {
           const timestamp = parseInt(key) * 1000; // convert seconds to ms
-          allEnergyData.push({ x: timestamp, y: value.energy });
+          if (value.energy_kWh !== undefined) {
+            allEnergyData.push({ x: timestamp, y: value.energy_kWh });
+          }
         });
 
         updateEnergyChart();
