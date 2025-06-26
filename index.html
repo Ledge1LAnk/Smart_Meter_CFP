@@ -614,6 +614,22 @@
       <div class="chart-container"><canvas id="energyChart"></canvas></div>
     </div>
   </div>
+
+      <hr class="section-divider">
+    
+    <!-- Carbon Emission Chart Section -->
+    <div class="chart-section">
+      <h3 class="section-title">Carbon Emission History</h3>
+      <div class="chart-header">
+        <h3 class="chart-title">Historical Carbon Emissions</h3>
+        <div class="time-range-selector" id="carbon-range">
+          <button class="time-range-btn active" data-range="24">Last 24h</button>
+          <button class="time-range-btn" data-range="168">Last 7d</button>
+          <button class="time-range-btn" data-range="672">Last 4w</button>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="carbonChart"></canvas></div>
+    </div>
   
   <footer>
     IoT Real-Time Smart Energy Meter for Real-Time Carbon Emission Visualization
@@ -654,10 +670,13 @@
 
     // Data storage for charts
     let allEnergyData = [];
+    let allCarbonData = [];
     let currentEnergyRange = 24; // hours for energy chart
+    let currentCarbonRange = 24; // hours for carbon chart
     
-    // Initialize chart
+    // Initialize charts
     const energyCtx = document.getElementById("energyChart").getContext("2d");
+    const carbonCtx = document.getElementById("carbonChart").getContext("2d");
     
     // Energy Chart
     const energyChart = new Chart(energyCtx, {
@@ -778,6 +797,125 @@
       });
     });
 
+        // Carbon Chart
+    const carbonChart = new Chart(carbonCtx, {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'Carbon Emission (kg CO2e)',
+          data: [],
+          borderColor: '#00ff9d',
+          backgroundColor: 'rgba(0, 255, 157, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          pointBackgroundColor: '#00ff9d',
+          pointHoverRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'time',
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+              color: '#aaa',
+              font: {
+                size: 11
+              }
+            },
+            title: {
+              display: true,
+              text: 'Time',
+              color: '#aaa',
+              font: {
+                size: 13
+              }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+              color: '#aaa',
+              font: {
+                size: 12
+              }
+            },
+            title: {
+              display: true,
+              text: 'Carbon (kg CO2e)',
+              color: '#aaa',
+              font: {
+                size: 13
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#fff',
+              boxWidth: 0,
+              font: {
+                size: 13
+              }
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            titleColor: '#00ff9d',
+            bodyColor: '#fff',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              title: function(tooltipItems) {
+                return 'Carbon Emissions';
+              },
+              label: function(context) {
+                return `Carbon: ${context.parsed.y.toFixed(3)} kg CO2e`;
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Update carbon chart with time filter
+    function updateCarbonChart() {
+      const now = Date.now();
+      const maxAge = currentCarbonRange * 60 * 60 * 1000; // Convert to milliseconds
+      
+      // Filter data based on current time range
+      const filteredData = allCarbonData.filter(point => now - point.x <= maxAge);
+      
+      // Update chart
+      carbonChart.data.datasets[0].data = filteredData;
+      carbonChart.update();
+    }
+    
+    // Time range selectors for carbon chart
+    document.querySelectorAll('#carbon-range .time-range-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('#carbon-range .time-range-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentCarbonRange = parseInt(this.dataset.range);
+        updateCarbonChart();
+      });
+    });
+
     // Update system status display
     function updateSystemStatus(relayState, carbonEmission, airQuality) {
       const statusIndicator = document.getElementById('statusIndicator');
@@ -846,7 +984,9 @@
       
       // Clear charts
       energyChart.data.datasets[0].data = [];
+      carbonChart.data.datasets[0].data = [];
       energyChart.update();
+      carbonChart.update();
     }
 
     // Listen for realtime data updates
@@ -879,12 +1019,19 @@
           x: timestamp,
           y: data.energy // Fixed field name
         });
+
+        allCarbonData.push({
+          x: timestamp,
+          y: data.co2_emission_kg
+        });
         
         // Update chart
         updateEnergyChart();
+        updateCarbonChart();
         
         // Update system status
         updateSystemStatus(data.relay_state, data.co2_emission_kg, data.mq2_ppm);
+        updateMainsStatus(data.relay_state, data.co2_emission_kg, data.mq2_ppm);
       }
     });
 
@@ -935,14 +1082,17 @@
         if (!data) return;
         
         allEnergyData = [];
+        allCarbonData = [];
 
         Object.entries(data).forEach(([key, value]) => {
           const timestamp = parseInt(key) * 1000; // convert seconds to ms
           allEnergyData.push({ x: timestamp, y: value.energy });
+          allCarbonData.push({ x: timestamp, y: value.co2_emission_kg });
         });
 
         // Update chart with historical data
         updateEnergyChart();
+        updateCarbonChart();
       });
     }  
     // Call to load previous data
