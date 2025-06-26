@@ -918,23 +918,21 @@
 
     // Load previous data
     function loadHistoricalData() {
-      const historyRef = database.ref('history');
-      historyRef.once('value', snapshot => {
-        const data = snapshot.val();
-        if (!data) return;
+  const historyRef = database.ref('history');
+  historyRef.once('value', snapshot => {
+    const data = snapshot.val();
+    if (!data) return;
+    
+    allEnergyData = [];
 
-        allEnergyData = [];
+    Object.entries(data).forEach(([key, value]) => {
+      const timestamp = parseInt(key) * 1000; // convert seconds to ms ✅
+      allEnergyData.push({ x: timestamp, y: value.energy });
+    });
 
-        Object.entries(data).forEach(([key, value]) => {
-          const timestamp = parseInt(key) * 1000; // convert seconds to ms
-          if (value.energy !== undefined) { // Fixed field name
-            allEnergyData.push({ x: timestamp, y: value.energy }); // Fixed field name
-          }
-        });
-
-        updateEnergyChart();
-      });
-    }
+    updateEnergyChart();
+  });
+}
     
     // Call to load previous data
     loadHistoricalData();
