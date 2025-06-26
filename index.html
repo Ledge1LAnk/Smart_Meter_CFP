@@ -844,7 +844,7 @@
     }
 
     // Listen for realtime data updates
-    database.ref('smart_meter/data').on('value', (snapshot) => {
+    database.ref('smart_meter').on('value', (snapshot) => {
       const data = snapshot.val();
       if (data) {
         // Reset the timeout on new data
