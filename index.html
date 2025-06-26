@@ -926,31 +926,25 @@
         updateMainsStatus(data.relay_state, data.co2_emission_kg, data.mq2_ppm);
       }
     });
-    
-    // Handle user input
-    checkbox.addEventListener('change', function() {
-      const state = this.checked;
-      ref.set(state);
-    });
 
     // Load previous data
     function loadHistoricalData() {
-  const historyRef = database.ref('history');
-  historyRef.once('value', snapshot => {
-    const data = snapshot.val();
-    if (!data) return;
-    
-    allEnergyData = [];
+      const historyRef = database.ref('history');
+      historyRef.once('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+        
+        allEnergyData = [];
 
-    Object.entries(data).forEach(([key, value]) => {
-      const timestamp = parseInt(key) * 1000; // convert seconds to ms ✅
-      allEnergyData.push({ x: timestamp, y: value.energy });
-    });
+        Object.entries(data).forEach(([key, value]) => {
+          const timestamp = parseInt(key) * 1000; // convert seconds to ms
+          allEnergyData.push({ x: timestamp, y: value.energy });
+        });
 
-    updateEnergyChart();
-  });
-}
-    
+        // Update chart with historical data
+        updateEnergyChart();
+      });
+    }  
     // Call to load previous data
     loadHistoricalData();
     
@@ -958,6 +952,7 @@
     dataTimeoutHandle = setTimeout(() => {
       resetDisplay();
     }, 30000);
+
     
   </script>
 </body>
