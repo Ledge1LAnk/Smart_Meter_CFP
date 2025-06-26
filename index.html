@@ -588,8 +588,14 @@
 
     <!-- Relay Controls Section -->
     <div class="controls-section">
-      <h3 class="section-title">Mains Control</h3>
-      <div class="controls" id="relayControls"></div>
+      <h3 class="section-title">Device Status</h3>
+      <div class="controls" id="relayControls">
+        <div class="control-card" id="mainsStatusCard">
+          <div class="power-icon">⚡</div>
+          <h3 class="control-title">Meter State</h3>
+          <div class="status-message" id="mainsStatusMessage">Checking status...</div>
+        </div>
+      </div>
     </div>
 
     <hr class="section-divider">
@@ -883,30 +889,41 @@
     });
 
     // Create relay control
-    const relayControls = document.getElementById("relayControls");
-    
-    const div = document.createElement("div");
-    div.className = "control-card";
-    div.innerHTML = `
-      <div class="power-icon">⚡</div>
-      <h3 class="control-title">Mains Power</h3>
-      <label class="switch">
-        <input type="checkbox" id="switch1">
-        <span class="slider"></span>
-      </label>
-    `;
-    relayControls.appendChild(div);
-    const checkbox = div.querySelector("input");
-    const ref = database.ref('control/relay1');
-    
-    // Listen for Firebase updates
-    ref.on('value', (snapshot) => {
-      const state = snapshot.val();
-      checkbox.checked = state;
-      if (state) {
-        div.classList.add('active');
+    // Mains status display
+    const mainsStatusCard = document.getElementById('mainsStatusCard');
+    const mainsStatusMessage = document.getElementById('mainsStatusMessage');
+
+    function updateMainsStatus(relayState, carbonEmission, airQuality) {
+      const carbonFootprint = carbonEmission > CARBON_LIMIT_KG;
+      const airFootprint = airQuality > CO2_PPM_THRESHOLD;
+      
+      if (!relayState) {
+        // System is off
+        mainsStatusCard.classList.remove('active');
+        mainsStatusMessage.textContent = "Turned Off";
+        mainsStatusCard.querySelector('.power-icon').style.color = '#ff3333';
+      } else if (carbonFootprint || airFootprint) {
+        // Threshold reached - should be off
+        mainsStatusCard.classList.remove('active');
+        mainsStatusMessage.textContent = "Turned Off (Threshold Reached)";
+        mainsStatusCard.querySelector('.power-icon').style.color = '#ff3333';
       } else {
-        div.classList.remove('active');
+        // System on and within thresholds
+        mainsStatusCard.classList.add('active');
+        mainsStatusMessage.textContent = "Turned On";
+        mainsStatusCard.querySelector('.power-icon').style.color = '#00ff9d';
+      }
+    }
+
+    // Update the updateSystemStatus function call to also update mains status
+    database.ref('smart_meter').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // ... (keep existing code)
+        
+        // Update system status and mains status
+        updateSystemStatus(data.relay_state, data.co2_emission_kg, data.mq2_ppm);
+        updateMainsStatus(data.relay_state, data.co2_emission_kg, data.mq2_ppm);
       }
     });
     
